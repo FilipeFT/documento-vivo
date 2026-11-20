@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Gramática do documento (Fase 7). Confere TIPOS (textos não vazios, booleanos,
+  ids, enumerações) e REFERÊNCIAS entre partes do documento (xs:key/xs:keyref):
+  bloco → grupo e sistemas, norma → elos, grupo → elo (filtroElo), vista → grupo.
+
+  O que XSD 1.0 não expressa continua em build.py (validate): regras que dependem
+  do tipo de outro campo (campos próprios de cada tipo de vista, no máximo uma
+  vista de diagrama/normas, elo "bloco" com bloco de mesmo id, campos de raia
+  quando raia=true), apelidos ambíguos entre elos e {total}/{visiveis} na contagem.
+
+  Textos de CONTEÚDO (blocos, normas, notas) podem ser vazios e alguns campos são
+  opcionais, como no navegador: tudo o que a página publicada aceita tem que caber
+  aqui (a opção de-json do build.py). Identidade e modelo são estritos, como o portão da página.
+
+  Objetos usam xs:all (ordem dos campos livre); listas são um elemento-invólucro
+  com itens repetidos (um invólucro vazio = lista vazia; ausente = campo ausente).
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="unqualified">
+
+  <!-- ===== tipos simples ===== -->
+  <xs:simpleType name="texto">
+    <xs:restriction base="xs:string"><xs:pattern value="[\s\S]*\S[\s\S]*"/></xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="id">
+    <xs:restriction base="xs:string"><xs:pattern value="[a-z0-9][a-z0-9\-]*"/></xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="idVista">
+    <xs:restriction base="xs:string"><xs:pattern value="[a-z][a-z0-9\-]*"/></xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="cor">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="principal"/><xs:enumeration value="sup"/><xs:enumeration value="aux"/>
+      <xs:enumeration value="apoio"/><xs:enumeration value="neutro"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="tipoElo">
+    <xs:restriction base="xs:string"><xs:enumeration value="bloco"/><xs:enumeration value="agregado"/></xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="tipoVista">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="diagrama"/><xs:enumeration value="normas"/>
+      <xs:enumeration value="cartoes"/><xs:enumeration value="lista"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="componente">
+    <xs:restriction base="xs:string"><xs:enumeration value="ecossistema"/><xs:enumeration value="raias"/></xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="fonteLista">
+    <xs:restriction base="xs:string"><xs:enumeration value="notas"/></xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="status">
+    <xs:restriction base="xs:string"><xs:enumeration value="ok"/><xs:enumeration value="conferir"/></xs:restriction>
+  </xs:simpleType>
+
+  <!-- listas de textos / ids (o nome do item é dado onde a lista é usada) -->
+  <xs:complexType name="listaP"><xs:sequence><xs:element name="p" type="texto" minOccurs="0" maxOccurs="unbounded"/></xs:sequence></xs:complexType>
+  <xs:complexType name="listaApelidos"><xs:sequence><xs:element name="apelido" type="texto" minOccurs="0" maxOccurs="unbounded"/></xs:sequence></xs:complexType>
+  <xs:complexType name="listaSistemaIds"><xs:sequence><xs:element name="sistema" type="id" minOccurs="0" maxOccurs="unbounded"/></xs:sequence></xs:complexType>
+  <xs:complexType name="listaEloIds"><xs:sequence><xs:element name="elo" type="id" minOccurs="0" maxOccurs="unbounded"/></xs:sequence></xs:complexType>
+  <xs:complexType name="listaItens"><xs:sequence><xs:element name="item" type="xs:string" minOccurs="0" maxOccurs="unbounded"/></xs:sequence></xs:complexType>
+
+  <!-- ===== meta: identidade ===== -->
+  <xs:complexType name="meta">
+    <xs:all>
+      <xs:element name="slug"><xs:simpleType><xs:restriction base="xs:string"><xs:pattern value="[a-z0-9][a-z0-9\-]*"/></xs:restriction></xs:simpleType></xs:element>
+      <xs:element name="titulo" type="texto"/>
+      <xs:element name="icone" type="texto"/>
+      <xs:element name="subtitulo" type="texto"/>
+      <xs:element name="margem" type="listaP" minOccurs="0"/>
+      <xs:element name="atualizado" type="xs:string" minOccurs="0"/>
+      <!-- texto da primeira visita (e de "Sobre este documento") -->
+      <xs:element name="apresentacao" minOccurs="0">
+        <xs:complexType><xs:all>
+          <xs:element name="titulo" type="texto"/>
+          <xs:element name="paragrafos"><xs:complexType><xs:sequence><xs:element name="p" type="texto" maxOccurs="unbounded"/></xs:sequence></xs:complexType></xs:element>
+          <xs:element name="links" minOccurs="0"><xs:complexType><xs:sequence>
+            <xs:element name="link" minOccurs="0" maxOccurs="unbounded"><xs:complexType><xs:all>
+              <xs:element name="rotulo" type="texto"/>
+              <xs:element name="url"><xs:simpleType><xs:restriction base="xs:string"><xs:pattern value="https?://.+"/></xs:restriction></xs:simpleType></xs:element>
+            </xs:all></xs:complexType></xs:element>
+          </xs:sequence></xs:complexType></xs:element>
+          <xs:element name="botao" type="texto"/>
+        </xs:all></xs:complexType>
+      </xs:element>
+    </xs:all>
+  </xs:complexType>
+
+  <!-- ===== modelo: vocabulário ===== -->
+  <xs:complexType name="grupo">
+    <xs:all>
+      <xs:element name="id" type="id"/>
+      <xs:element name="etiqueta" type="texto"/>
+      <xs:element name="sequencial" type="xs:boolean"/>
+      <xs:element name="raia" type="xs:boolean"/>
+      <xs:element name="cor" type="cor"/>
+      <xs:element name="nome" type="texto" minOccurs="0"/>
+      <xs:element name="icone" type="texto" minOccurs="0"/>
+      <xs:element name="subtitulo" type="texto" minOccurs="0"/>
+      <xs:element name="filtroElo" type="id" minOccurs="0"/>
+    </xs:all>
+  </xs:complexType>
+  <xs:complexType name="sistema">
+    <xs:all>
+      <xs:element name="id" type="id"/>
+      <xs:element name="nome" type="texto"/>
+      <xs:element name="desc" type="texto"/>
+    </xs:all>
+  </xs:complexType>
+  <xs:complexType name="elo">
+    <xs:all>
+      <xs:element name="id" type="id"/>
+      <xs:element name="tipo" type="tipoElo"/>
+      <xs:element name="abrev" type="texto"/>
+      <xs:element name="rotulo" type="texto" minOccurs="0"/>
+      <xs:element name="apelidos" type="listaApelidos" minOccurs="0"/>
+    </xs:all>
+  </xs:complexType>
+  <xs:complexType name="ecossistema">
+    <xs:all>
+      <xs:element name="nucleo" type="texto"/>
+      <xs:element name="nota" type="texto"/>
+      <xs:element name="semItem" type="texto"/>
+      <xs:element name="dicaChip" type="texto"/>
+    </xs:all>
+  </xs:complexType>
+  <xs:complexType name="vista">
+    <xs:all>
+      <xs:element name="id" type="idVista"/>
+      <xs:element name="tipo" type="tipoVista"/>
+      <xs:element name="rotulo" type="texto"/>
+      <xs:element name="icone" type="texto"/>
+      <xs:element name="titulo" type="texto"/>
+      <xs:element name="intro" type="xs:string"/>
+      <!-- campos de cada tipo (qual vale para qual tipo: build.py) -->
+      <xs:element name="componentes" minOccurs="0">
+        <xs:complexType><xs:sequence><xs:element name="componente" type="componente" maxOccurs="unbounded"/></xs:sequence></xs:complexType>
+      </xs:element>
+      <xs:element name="colunas" minOccurs="0">
+        <xs:complexType><xs:all>
+          <xs:element name="esfera" type="texto"/><xs:element name="norma" type="texto"/>
+          <xs:element name="resumo" type="texto"/><xs:element name="elos" type="texto"/>
+        </xs:all></xs:complexType>
+      </xs:element>
+      <xs:element name="ordemEsferas" minOccurs="0">
+        <xs:complexType><xs:sequence><xs:element name="esfera" type="texto" minOccurs="0" maxOccurs="unbounded"/></xs:sequence></xs:complexType>
+      </xs:element>
+      <xs:element name="rotulos" minOccurs="0">
+        <xs:complexType><xs:all>
+          <xs:element name="busca" type="texto"/><xs:element name="buscaAria" type="texto"/>
+          <xs:element name="contagem" type="texto"/><xs:element name="adicionar" type="texto"/>
+          <xs:element name="filtroElo" type="texto"/><xs:element name="aConferir" type="texto"/>
+          <xs:element name="verElo" type="texto"/><xs:element name="verAplicavel" type="texto"/>
+        </xs:all></xs:complexType>
+      </xs:element>
+      <xs:element name="grupo" type="id" minOccurs="0"/>
+      <xs:element name="fonte" type="fonteLista" minOccurs="0"/>
+    </xs:all>
+  </xs:complexType>
+  <xs:complexType name="modelo">
+    <xs:all>
+      <xs:element name="grupos"><xs:complexType><xs:sequence><xs:element name="grupo" type="grupo" maxOccurs="unbounded"/></xs:sequence></xs:complexType></xs:element>
+      <xs:element name="sistemas"><xs:complexType><xs:sequence><xs:element name="sistema" type="sistema" maxOccurs="unbounded"/></xs:sequence></xs:complexType></xs:element>
+      <xs:element name="elos"><xs:complexType><xs:sequence><xs:element name="elo" type="elo" maxOccurs="unbounded"/></xs:sequence></xs:complexType></xs:element>
+      <xs:element name="ecossistema" type="ecossistema"/>
+      <xs:element name="vistas"><xs:complexType><xs:sequence><xs:element name="vista" type="vista" maxOccurs="unbounded"/></xs:sequence></xs:complexType></xs:element>
+    </xs:all>
+  </xs:complexType>
+
+  <!-- ===== conteúdo ===== -->
+  <xs:complexType name="secao">
+    <xs:all>
+      <xs:element name="titulo" type="xs:string"/>
+      <xs:element name="itens" type="listaItens"/>
+      <xs:element name="margem" type="xs:boolean" minOccurs="0"/>
+    </xs:all>
+  </xs:complexType>
+  <xs:complexType name="bloco">
+    <xs:all>
+      <xs:element name="id" type="id"/>
+      <xs:element name="grupo" type="id"/>
+      <xs:element name="nome" type="xs:string"/>
+      <xs:element name="resumo" type="xs:string" minOccurs="0"/>
+      <xs:element name="secoes" minOccurs="0"><xs:complexType><xs:sequence><xs:element name="secao" type="secao" minOccurs="0" maxOccurs="unbounded"/></xs:sequence></xs:complexType></xs:element>
+      <xs:element name="sistemas" type="listaSistemaIds" minOccurs="0"/>
+    </xs:all>
+  </xs:complexType>
+  <xs:complexType name="norma">
+    <xs:all>
+      <xs:element name="esfera" type="xs:string"/>
+      <xs:element name="titulo" type="xs:string"/>
+      <xs:element name="resumo" type="xs:string" minOccurs="0"/>
+      <xs:element name="fonte" type="xs:string" minOccurs="0"/>
+      <xs:element name="elos" type="listaEloIds"/>
+      <xs:element name="status" type="status" minOccurs="0"/>
+    </xs:all>
+  </xs:complexType>
+  <xs:complexType name="sigla">
+    <xs:all>
+      <xs:element name="expansao" type="texto"/>
+      <xs:element name="url" type="xs:string" minOccurs="0"/>
+      <xs:element name="status" type="status" minOccurs="0"/>
+    </xs:all>
+    <xs:attribute name="chave" type="texto" use="required"/>
+  </xs:complexType>
+
+  <!-- ===== documento ===== -->
+  <xs:element name="documento">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="meta" type="meta"/>
+        <xs:element name="modelo" type="modelo"/>
+        <xs:element name="blocos"><xs:complexType><xs:sequence><xs:element name="bloco" type="bloco" maxOccurs="unbounded"/></xs:sequence></xs:complexType></xs:element>
+        <xs:element name="normas"><xs:complexType><xs:sequence><xs:element name="norma" type="norma" minOccurs="0" maxOccurs="unbounded"/></xs:sequence></xs:complexType></xs:element>
+        <xs:element name="notas"><xs:complexType><xs:sequence><xs:element name="nota" type="xs:string" minOccurs="0" maxOccurs="unbounded"/></xs:sequence></xs:complexType></xs:element>
+        <xs:element name="siglas"><xs:complexType><xs:sequence><xs:element name="sigla" type="sigla" minOccurs="0" maxOccurs="unbounded"/></xs:sequence></xs:complexType></xs:element>
+      </xs:sequence>
+    </xs:complexType>
+
+    <!-- ids únicos -->
+    <xs:key name="grupoId"><xs:selector xpath="modelo/grupos/grupo"/><xs:field xpath="id"/></xs:key>
+    <xs:key name="sistemaId"><xs:selector xpath="modelo/sistemas/sistema"/><xs:field xpath="id"/></xs:key>
+    <xs:key name="eloId"><xs:selector xpath="modelo/elos/elo"/><xs:field xpath="id"/></xs:key>
+    <xs:unique name="vistaId"><xs:selector xpath="modelo/vistas/vista"/><xs:field xpath="id"/></xs:unique>
+    <xs:unique name="blocoId"><xs:selector xpath="blocos/bloco"/><xs:field xpath="id"/></xs:unique>
+    <xs:unique name="siglaChave"><xs:selector xpath="siglas/sigla"/><xs:field xpath="@chave"/></xs:unique>
+    <!-- referências -->
+    <xs:keyref name="blocoGrupo" refer="grupoId"><xs:selector xpath="blocos/bloco"/><xs:field xpath="grupo"/></xs:keyref>
+    <xs:keyref name="blocoSistema" refer="sistemaId"><xs:selector xpath="blocos/bloco/sistemas/sistema"/><xs:field xpath="."/></xs:keyref>
+    <xs:keyref name="normaElo" refer="eloId"><xs:selector xpath="normas/norma/elos/elo"/><xs:field xpath="."/></xs:keyref>
+    <xs:keyref name="grupoFiltroElo" refer="eloId"><xs:selector xpath="modelo/grupos/grupo"/><xs:field xpath="filtroElo"/></xs:keyref>
+    <xs:keyref name="vistaGrupo" refer="grupoId"><xs:selector xpath="modelo/vistas/vista"/><xs:field xpath="grupo"/></xs:keyref>
+  </xs:element>
+</xs:schema>
