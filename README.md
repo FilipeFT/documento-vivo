@@ -1,6 +1,6 @@
 # Motor de documentos vivos
 
-Monta, a partir de um `documento.xml`, uma página HTML autocontida e editável: um diagrama de grupos (raias) e blocos dentro de um ecossistema de sistemas de contexto, uma tabela de referências ligadas a elos, cartões, listas de notas e um dicionário de siglas. Nasceu do [Observatório do Açaí](../documentos/observatorio-acai/README.md), o primeiro documento feito com ele.
+Monta, a partir de um `documento.xml`, uma página HTML autocontida e editável: um diagrama de grupos (raias) e blocos dentro de um ecossistema de sistemas de contexto, uma tabela de referências ligadas a elos, cartões, listas de notas e um dicionário de siglas. Nasceu do [Observatório do Açaí](https://telohub.github.io/)), o primeiro documento feito com ele.
 
 ## Começar: `init.py`
 
